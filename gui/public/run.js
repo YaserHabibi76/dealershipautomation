@@ -109,6 +109,11 @@ async function initRunTab() {
     statusEl.textContent = e.message;
   }
 
+  try {
+    const settings = await Api.get('/api/settings');
+    form.elements.headed.checked = !settings.headlessDefault;
+  } catch {}
+
   form.querySelectorAll('input[name="csvSource"]').forEach((r) => {
     r.addEventListener('change', () => updateCsvSourceUI(form));
   });
