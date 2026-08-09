@@ -1,0 +1,18 @@
+node_modules/
+
+# Personal / generated data — this repo tracks code only. All runtime data (contact
+# info, CapSolver key, dealer lists, run results) lives alongside it locally, or on a
+# mounted persistent disk in production (see DEPLOY.md) — never in git.
+contact.json
+contact_form_bot/config.json
+*_ontario_dealerships.csv
+ontario_*_dealerships.csv
+retry-*.csv
+contact_form_bot/results*.csv
+contact_form_bot/retry_dry_run.csv
+chevrolet_NOT_sent.csv
+chevrolet_retry_batch.csv
+*.meta.json
+
+.DS_Store
+.claude/settings.local.json

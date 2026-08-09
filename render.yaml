@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: dealer-contact-bot
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    envVars:
+      - key: APP_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: dealer-bot-data
+      mountPath: /data
+      sizeGB: 1

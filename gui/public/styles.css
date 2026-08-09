@@ -1,0 +1,162 @@
+:root {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --border: #dde1e6;
+  --text: #1c2127;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --accent-text: #ffffff;
+  --danger: #b91c1c;
+  --ok: #15803d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --panel: #1c1f26;
+    --border: #2c313a;
+    --text: #e6e9ef;
+    --muted: #9aa3af;
+    --accent: #4f8dff;
+    --accent-text: #0b1020;
+    --danger: #f87171;
+    --ok: #4ade80;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar {
+  padding: 1.25rem 1.5rem 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.topbar h1 { margin: 0 0 0.75rem; font-size: 1.25rem; }
+
+.tabs { display: flex; gap: 0.25rem; }
+.tab-btn {
+  padding: 0.6rem 1rem;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+main { max-width: 760px; margin: 0 auto; padding: 1.5rem; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+h2 { margin-top: 0; }
+.hint { color: var(--muted); font-size: 0.875rem; }
+
+.stack { display: flex; flex-direction: column; gap: 0.85rem; }
+.stack label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; font-weight: 600; }
+.stack input, .stack select, .stack textarea {
+  font: inherit;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem; }
+.row-inline { display: flex; flex-direction: row; align-items: center; gap: 0.4rem; }
+/* Needs to out-specificity ".stack label" (which sets flex-direction: column) for the
+   dry-run/headed/headless-default checkbox labels to actually render inline. */
+label.row-inline { flex-direction: row; font-weight: 400; }
+
+button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button[type="button"]:not(#run-stop-btn):not(#results-refresh-btn):not(#results-retry-btn) {
+  background: transparent;
+  color: var(--accent);
+}
+
+.status-msg { font-size: 0.85rem; color: var(--muted); }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem;
+  background: var(--panel);
+}
+.card h3 { margin: 0 0 0.35rem; font-size: 1rem; }
+.card p { margin: 0 0 0.6rem; color: var(--muted); font-size: 0.8rem; }
+
+.hidden { display: none !important; }
+
+.login-gate {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 100;
+}
+.login-card {
+  width: 100%;
+  max-width: 320px;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.login-card h2 { margin-top: 0; }
+
+fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; }
+legend { padding: 0 0.4rem; font-weight: 600; font-size: 0.85rem; color: var(--muted); }
+
+.progress-bar { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; margin-top: 1rem; }
+.progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s ease; }
+#run-progress-label { font-size: 0.85rem; color: var(--muted); margin: 0.4rem 0; }
+
+.count-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0 1rem; }
+.badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text);
+}
+.badge-SUBMITTED { background: color-mix(in srgb, var(--ok) 25%, transparent); }
+.badge-ERROR, .badge-CAPTCHA_ERROR, .badge-CAPTCHA_BLOCKED { background: color-mix(in srgb, var(--danger) 25%, transparent); }
+
+.log-pane {
+  margin-top: 1rem;
+  height: 260px;
+  overflow-y: auto;
+  background: #0b0d10;
+  color: #d7dce2;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+}
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td:last-child, th:last-child { white-space: normal; }
+thead { background: var(--panel); position: sticky; top: 0; }

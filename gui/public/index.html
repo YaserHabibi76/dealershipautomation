@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dealer Contact Bot</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<div id="login-gate" class="login-gate hidden">
+  <form id="login-form" class="login-card stack">
+    <h2>Sign in</h2>
+    <label>Password<input name="password" type="password" required autofocus /></label>
+    <div class="row">
+      <button type="submit">Sign in</button>
+      <span id="login-status" class="status-msg"></span>
+    </div>
+  </form>
+</div>
+
+<div id="app-shell" class="hidden">
+<header class="topbar">
+  <h1>Dealer Contact Bot</h1>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="run">Run</button>
+    <button class="tab-btn" data-tab="results">Results</button>
+    <button class="tab-btn" data-tab="dealers">Dealer Lists</button>
+    <button class="tab-btn" data-tab="contact">Contact Info</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+    <button id="logout-btn" class="tab-btn hidden" type="button">Log out</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-run" class="tab-panel active">
+    <h2>Run</h2>
+    <p class="hint">Upload a dealer CSV (or pick a saved list), confirm your info below, and go.</p>
+    <form id="run-form" class="stack">
+      <fieldset class="stack">
+        <legend>Your info</legend>
+        <label>First name<input name="firstName" required /></label>
+        <label>Last name<input name="lastName" required /></label>
+        <label>Email<input name="email" type="email" required /></label>
+        <label>Phone<input name="phone" required /></label>
+        <label>Message<textarea name="message" rows="4" required></textarea></label>
+      </fieldset>
+
+      <fieldset class="stack">
+        <legend>Dealer list</legend>
+        <label class="row-inline"><input type="radio" name="csvSource" value="existing" checked /> Use a saved list</label>
+        <select name="csvIn" id="run-csv-select"></select>
+
+        <label class="row-inline"><input type="radio" name="csvSource" value="upload" /> Upload a CSV</label>
+        <div id="run-upload-fields" class="stack hidden">
+          <label>List name<input name="uploadBrand" placeholder="e.g. toyota" /></label>
+          <label>CSV file<input type="file" name="uploadFile" accept=".csv" /></label>
+          <p class="hint">Needs columns: <code>Dealership Name, City, Website, Contact Page URL</code></p>
+        </div>
+      </fieldset>
+
+      <div class="row-inline">
+        <label class="row-inline"><input type="checkbox" name="dryRun" checked /> Dry run (fill forms, don't submit)</label>
+        <label class="row-inline"><input type="checkbox" name="headed" /> Show browser window</label>
+      </div>
+      <div class="row">
+        <button type="submit" id="run-start-btn">Start</button>
+        <button type="button" id="run-stop-btn" disabled>Stop</button>
+        <span id="run-form-status" class="status-msg"></span>
+      </div>
+    </form>
+
+    <div id="run-progress" class="hidden">
+      <div class="progress-bar"><div id="run-progress-fill" class="progress-fill"></div></div>
+      <p id="run-progress-label"></p>
+      <div id="run-counts" class="count-badges"></div>
+    </div>
+
+    <pre id="run-log" class="log-pane"></pre>
+  </section>
+
+  <section id="tab-results" class="tab-panel">
+    <h2>Results</h2>
+    <div class="row">
+      <select id="results-file-select"></select>
+      <button id="results-refresh-btn" type="button">Refresh</button>
+      <button id="results-retry-btn" type="button">Retry failed</button>
+      <span id="results-status" class="status-msg"></span>
+    </div>
+    <div id="results-counts" class="count-badges"></div>
+    <div class="table-wrap">
+      <table id="results-table">
+        <thead><tr><th>Name</th><th>City</th><th>Status</th><th>Notes</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="tab-dealers" class="tab-panel">
+    <h2>Dealer Lists</h2>
+    <p class="hint">
+      Brands with a scraper can be refreshed with one click. For others (e.g. Chevrolet), import a CSV with columns
+      <code>Dealership Name, City, Website, Contact Page URL</code> — or just upload one from the Run tab.
+    </p>
+    <div id="dealers-list" class="card-grid"></div>
+
+    <h3>Import a CSV</h3>
+    <form id="import-form" class="stack">
+      <label>Brand name<input name="brand" placeholder="e.g. chevrolet" required /></label>
+      <label>CSV file<input name="file" type="file" accept=".csv" required /></label>
+      <div class="row">
+        <button type="submit">Import</button>
+        <span id="import-status" class="status-msg"></span>
+      </div>
+    </form>
+  </section>
+
+  <section id="tab-contact" class="tab-panel">
+    <h2>Contact Info</h2>
+    <p class="hint">This is the identity &amp; message used to fill every dealer's contact form. (Same fields as on the Run tab — editing either updates the other.)</p>
+    <form id="contact-form" class="stack">
+      <label>First name<input name="firstName" required /></label>
+      <label>Last name<input name="lastName" required /></label>
+      <label>Email<input name="email" type="email" required /></label>
+      <label>Phone<input name="phone" required /></label>
+      <label>Message<textarea name="message" rows="6" required></textarea></label>
+      <div class="row">
+        <button type="submit">Save</button>
+        <span id="contact-status" class="status-msg"></span>
+      </div>
+    </form>
+  </section>
+
+  <section id="tab-settings" class="tab-panel">
+    <h2>Settings</h2>
+    <form id="settings-form" class="stack">
+      <label>CapSolver API key
+        <input name="capsolverApiKey" type="password" placeholder="Leave blank to keep current key" autocomplete="off" />
+      </label>
+      <p id="settings-key-state" class="hint"></p>
+      <label class="row-inline"><input name="headlessDefault" type="checkbox" /> Run headless by default</label>
+      <div class="row">
+        <button type="submit">Save</button>
+        <span id="settings-status" class="status-msg"></span>
+      </div>
+    </form>
+  </section>
+</main>
+</div>
+
+<script src="/api.js"></script>
+<script src="/auth.js"></script>
+<script src="/contact.js"></script>
+<script src="/settings.js"></script>
+<script src="/dealers.js"></script>
+<script src="/run.js"></script>
+<script src="/results.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+node_modules
+contact_form_bot/node_modules
+.git
+.DS_Store
+.claude
+
+contact.json
+contact_form_bot/config.json
+*_ontario_dealerships.csv
+ontario_*_dealerships.csv
+retry-*.csv
+contact_form_bot/results*.csv
+contact_form_bot/retry_dry_run.csv
+chevrolet_NOT_sent.csv
+chevrolet_retry_batch.csv
+*.meta.json
