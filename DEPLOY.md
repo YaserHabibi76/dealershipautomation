@@ -5,16 +5,25 @@ instead of your Mac, with a password gate since it's now reachable by anyone wit
 URL. The Docker image (`Dockerfile`) uses Playwright's official base image so Chromium
 and its system dependencies are already correctly installed — no extra setup needed.
 
-## Cost note before you start
+## Free tier (what `render.yaml` is set up for)
 
-Persistent storage (so your contact info, dealer lists, and results survive between
-deploys and Render's idle spin-down) requires a **paid instance + disk add-on**
-(`render.yaml` requests the `starter` plan + a 1GB disk, roughly $7-8/mo total as of
-writing — check Render's current pricing). You *can* run this on Render's free tier
-instead, but the filesystem resets on every redeploy and after ~15 min of inactivity,
-so anything you entered through the GUI (contact info, CapSolver key, uploaded CSVs,
-run results) would need re-entering each time. If you want free-tier, remove the
-`disk:` block and `DATA_DIR` env var from `render.yaml` before deploying.
+`render.yaml` requests Render's `free` web service plan — $0/mo, no card or trial
+required. The trade-off: there's no persistent disk on free tier, so `/data` (contact
+info, CapSolver key, dealer CSVs, results) resets on every redeploy and after ~15 min
+of inactivity. In practice, for occasional use (a run once or twice a week), you'll be
+re-entering contact info and the CapSolver key most sessions, and keeping a local copy
+of any dealer CSV that doesn't have a scraper (e.g. Chevrolet's) to re-upload quickly.
+Toyota/Lexus can just be re-scraped fresh each time from the Dealer Lists tab.
+
+If you'd rather have things persist between sessions, add a paid instance + disk
+instead — swap `plan: free` for `plan: starter` and add back:
+```yaml
+disk:
+  name: dealer-bot-data
+  mountPath: /data
+  sizeGB: 1
+```
+(roughly $7-8/mo total as of writing — check Render's current pricing).
 
 ## One-time setup
 
@@ -24,7 +33,7 @@ run results) would need re-entering each time. If you want free-tier, remove the
    git push -u origin main
    ```
 2. In the Render dashboard: **New > Blueprint**, connect the GitHub repo. Render reads
-   `render.yaml` automatically and provisions the web service + disk.
+   `render.yaml` automatically and provisions the web service.
 3. Render will prompt for the `APP_PASSWORD` env var (marked `sync: false` in
    `render.yaml` so it's not stored in the repo) — set it to whatever password you want
    to gate the app with. `SESSION_SECRET` is auto-generated for you.
@@ -38,8 +47,9 @@ Everything is set up through the GUI itself — there's no server file to manual
 - **Run tab**: fill in your contact info, upload a dealer CSV (or use Toyota/Lexus's
   "Scrape now" from the Dealer Lists tab), and start a run.
 
-## Redeploys
+## Redeploys / idle spin-down
 
-Pushing new commits to the connected branch auto-redeploys. Because `/data` is a
-persistent disk (not part of the git-tracked code), your contact info, CapSolver key,
-dealer lists, and results all survive redeploys untouched.
+Pushing new commits to the connected branch auto-redeploys. On the free plan this also
+means `/data` resets — same as after ~15 min of inactivity. Re-enter contact info /
+CapSolver key / re-upload CSVs as needed each session; nothing about the app itself
+requires manual fixing after a reset, it's just an empty-state GUI again.
