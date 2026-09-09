@@ -293,6 +293,19 @@ async function revealMore(page, attempt, baselineCount) {
   }
 }
 
+// A single slow/stuck field (Playwright's actionability wait can hang up to
+// its timeout under a CPU-starved host — see Render free-tier notes) used to
+// take down the whole dealer via an uncaught rejection here. Now it just
+// doesn't count as filled, so the rest of the form still gets a shot.
+async function safeFill(el, value, timeout = 12000) {
+  try {
+    await el.fill(value, { timeout });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function fillForm(page) {
   let filled = 0;
 
@@ -300,22 +313,21 @@ async function fillForm(page) {
   const lastEl  = await findFirst(page, SELECTORS.lastName);
 
   if (firstEl && lastEl) {
-    await firstEl.fill(CONTACT.firstName);
-    await lastEl.fill(CONTACT.lastName);
-    filled += 2;
+    if (await safeFill(firstEl, CONTACT.firstName)) filled++;
+    if (await safeFill(lastEl, CONTACT.lastName)) filled++;
   } else {
     const nameEl = await findFirst(page, [...SELECTORS.fullName, ...SELECTORS.firstName]);
-    if (nameEl) { await nameEl.fill(CONTACT.fullName); filled++; }
+    if (nameEl && await safeFill(nameEl, CONTACT.fullName)) filled++;
   }
 
   const emailEl = await findFirst(page, SELECTORS.email);
-  if (emailEl) { await emailEl.fill(CONTACT.email); filled++; }
+  if (emailEl && await safeFill(emailEl, CONTACT.email)) filled++;
 
   const phoneEl = await findFirst(page, SELECTORS.phone);
-  if (phoneEl) { await phoneEl.fill(CONTACT.phone); filled++; }
+  if (phoneEl && await safeFill(phoneEl, CONTACT.phone)) filled++;
 
   const msgEl = await findFirst(page, SELECTORS.message);
-  if (msgEl) { await msgEl.fill(CONTACT.message); filled++; }
+  if (msgEl && await safeFill(msgEl, CONTACT.message)) filled++;
 
   // Select best-match option in any department/type dropdown — prefer Sales, fall back to General
   try {
