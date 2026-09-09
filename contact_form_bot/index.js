@@ -268,6 +268,7 @@ async function revealMore(page, attempt, baselineCount) {
           }, i);
         } catch {}
         await page.waitForTimeout(1200);
+        await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
         const rescan = await findBestScope(page);
         if (rescan.count > baselineCount) return true;
       }
@@ -354,6 +355,11 @@ async function processDealer(page, row) {
   try {
     await page.goto(url, { timeout: 30000, waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
+    // Best-effort extra wait for slow/JS-heavy pages (e.g. under Render's
+    // resource-constrained free tier, form widgets can render well after the
+    // fixed 2s above) — bounded so pages with permanent background chatter
+    // (chat widgets, analytics polling) don't stall the whole run.
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await dismissCookieBanner(page);
 
     // Up to 3 real attempts to locate a fillable form: as-loaded, after
