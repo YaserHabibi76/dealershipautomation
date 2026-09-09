@@ -523,8 +523,22 @@ async function processDealer(page, row) {
         continue;
       }
     }
-    const result = await processDealer(page, row);
+    let result = await processDealer(page, row);
     await page.close().catch(() => {});
+
+    // FORM_NOT_FOUND has repeatedly turned out to be a transient miss (the
+    // form is genuinely there — reproducing the same dealer locally finds it
+    // fine) rather than the site really having no form. One retry on a
+    // completely fresh page catches that class without masking dealers that
+    // truly have no fillable form (a second identical miss stays FORM_NOT_FOUND).
+    if (result.status === 'FORM_NOT_FOUND') {
+      console.log('   ...FORM_NOT_FOUND, retrying once on a fresh page');
+      try {
+        const retryPage = await context.newPage();
+        result = await processDealer(retryPage, row);
+        await retryPage.close().catch(() => {});
+      } catch {}
+    }
 
     results.push(result);
     console.log(result.status + (result.notes ? `  — ${result.notes}` : ''));
