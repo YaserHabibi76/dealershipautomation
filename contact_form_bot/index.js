@@ -5,17 +5,18 @@ const { parse } = require('csv-parse/sync');
 const { stringify } = require('csv-stringify/sync');
 
 // CapSolver key lives in config.json (gitignored), editable via the GUI Settings tab.
-// See config.example.json for the shape. Falls back to the unset sentinel below.
-// CAPSOLVER_CONFIG_PATH lets the GUI point this at a persistent-disk location when
-// deployed (code dir is ephemeral there); defaults to the same relative path as before
-// for plain CLI usage.
+// See config.example.json for the shape. CAPSOLVER_CONFIG_PATH lets the GUI point this
+// at a persistent-disk location when deployed (code dir is ephemeral there); defaults
+// to the same relative path as before for plain CLI usage.
 const configFile = process.env.CAPSOLVER_CONFIG_PATH || path.resolve(__dirname, 'config.json');
 let localConfig = {};
 if (fs.existsSync(configFile)) {
   try { localConfig = JSON.parse(fs.readFileSync(configFile, 'utf8')); }
   catch (e) { console.error(`Warning: could not parse config.json (${e.message}); ignoring.`); }
 }
-const CAPSOLVER_API_KEY = localConfig.capsolverApiKey || 'YOUR_KEY_HERE';
+// Falls back to the CAPSOLVER_API_KEY env var (set in Render's Environment tab, same
+// as APP_PASSWORD) so the key survives free-tier disk resets between sessions.
+const CAPSOLVER_API_KEY = localConfig.capsolverApiKey || process.env.CAPSOLVER_API_KEY || 'YOUR_KEY_HERE';
 
 // Load contact details from contact.json (edit that file to change them).
 // CONTACT_PATH overrides for the same reason as CAPSOLVER_CONFIG_PATH above.
