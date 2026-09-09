@@ -5,30 +5,41 @@ instead of your Mac, with a password gate since it's now reachable by anyone wit
 URL. The Docker image (`Dockerfile`) uses Playwright's official base image so Chromium
 and its system dependencies are already correctly installed — no extra setup needed.
 
-## Free tier (what `render.yaml` is set up for)
+## Plan: starter (what `render.yaml` is set up for)
 
-`render.yaml` requests Render's `free` web service plan — $0/mo, no card or trial
-required. The trade-off: there's no persistent disk on free tier, so `/data` (contact
-info, dealer CSVs, results) resets on every redeploy and after ~15 min of inactivity.
-In practice, for occasional use (a run once or twice a week), you'll be re-entering
-contact info most sessions, and keeping a local copy of any dealer CSV that doesn't
-have a scraper (e.g. Chevrolet's) to re-upload quickly. Toyota/Lexus can just be
-re-scraped fresh each time from the Dealer Lists tab.
+`render.yaml` requests Render's `starter` web service plan — ~$7/mo, 0.5 CPU / 512MB
+RAM. Originally this ran on the `free` plan (0.1 CPU / 512MB), but that proved too
+CPU-starved for reliable Playwright automation: Chromium's internal
+actionability/timing checks (is this element done rendering, is the page network-idle,
+is this field truly ready for input) kept failing under load in ways that never
+reproduced testing the same pages locally. Starter isn't a huge jump in resources, but
+it stopped being a tenth of a core, which is what mattered.
+
+Starter also doesn't spin down after ~15 min of inactivity the way free does, so the
+app responds instantly instead of a 50+ second cold-start delay on the first request
+of a session.
+
+There's still no persistent disk attached, so `/data` (contact info, dealer CSVs,
+results) resets on every redeploy — same trade-off as before, just without the
+idle-spin-down reset on top of it now. In practice, for occasional use (a run once or
+twice a week), you'll be re-entering contact info most sessions, and keeping a local
+copy of any dealer CSV that doesn't have a scraper (e.g. Chevrolet's) to re-upload
+quickly. Toyota/Lexus can just be re-scraped fresh each time from the Dealer Lists tab.
 
 The CapSolver key is the one exception: it's set as the `CAPSOLVER_API_KEY` env var
 (like `APP_PASSWORD`, `sync: false` — entered once in Render's dashboard, not the repo),
 so it survives resets. The Settings tab can still set a different key for a one-off
 session; that overrides the env var until the next reset.
 
-If you'd rather have things persist between sessions, add a paid instance + disk
-instead — swap `plan: free` for `plan: starter` and add back:
+If you'd rather have contact info / CSVs persist between sessions too, add a disk:
 ```yaml
 disk:
   name: dealer-bot-data
   mountPath: /data
   sizeGB: 1
 ```
-(roughly $7-8/mo total as of writing — check Render's current pricing).
+(roughly $0.25/GB/mo on top of the $7/mo instance, as of writing — check Render's
+current pricing).
 
 ## One-time setup
 
@@ -54,10 +65,11 @@ Everything is set up through the GUI itself — there's no server file to manual
 - **Run tab**: fill in your contact info, upload a dealer CSV (or use Toyota/Lexus's
   "Scrape now" from the Dealer Lists tab), and start a run.
 
-## Redeploys / idle spin-down
+## Redeploys
 
-Pushing new commits to the connected branch auto-redeploys. On the free plan this also
-means `/data` resets — same as after ~15 min of inactivity. Re-enter contact info /
-re-upload CSVs as needed each session (the CapSolver key survives, since it's an env
-var, not `/data`); nothing about the app itself requires manual fixing after a reset,
-it's just an empty-state GUI again.
+Pushing new commits to the connected branch auto-redeploys. `/data` resets on every
+redeploy (no persistent disk — see above), but unlike on the free plan it no longer
+also resets from idle spin-down, since starter stays running between sessions. Re-enter
+contact info / re-upload CSVs as needed after a redeploy (the CapSolver key survives,
+since it's an env var, not `/data`); nothing about the app itself requires manual
+fixing after a reset, it's just an empty-state GUI again.

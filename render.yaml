@@ -3,7 +3,7 @@ services:
     name: dealer-contact-bot
     env: docker
     dockerfilePath: ./Dockerfile
-    plan: free
+    plan: starter
     envVars:
       - key: APP_PASSWORD
         sync: false
@@ -15,7 +15,11 @@ services:
         value: production
       - key: DATA_DIR
         value: /data
-    # No persistent disk on the free plan — /data is just an ordinary ephemeral
-    # directory inside the container. It works fine while the instance is up, but
-    # resets on every redeploy and after ~15 min idle (free services spin down and
-    # lose their filesystem). See DEPLOY.md for what that means day to day.
+    # Upgraded from free to starter (0.5 CPU / 512MB) to fix Playwright timing
+    # failures (form-field detection, individual field fills) that reproduced
+    # reliably locally but failed intermittently on Render — consistent with
+    # the free plan's 0.1 CPU being too little for a real Chromium browser
+    # under load. No persistent disk added — /data is still an ordinary
+    # ephemeral directory that resets on every redeploy (CAPSOLVER_API_KEY is
+    # an env var instead, so it isn't affected; contact info / dealer CSVs
+    # still need re-entering each session). See DEPLOY.md for details.
