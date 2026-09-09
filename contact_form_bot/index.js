@@ -43,6 +43,15 @@ const CONTACT = {
 const DRY_RUN  = process.argv.includes('--dry-run');
 const HEADLESS = !process.argv.includes('--headed');
 
+// The GUI's Stop button sends SIGTERM. Node's default is to kill the process
+// immediately on that signal — but Playwright appears to intercept it to close
+// the browser first, and an in-flight page operation racing that closure then
+// throws as an uncaught exception (looks like a crash, isn't one). Registering
+// a handler takes over shutdown ourselves: the main loop checks this flag and
+// exits cleanly at the next safe point instead.
+let shuttingDown = false;
+process.on('SIGTERM', () => { shuttingDown = true; });
+
 function argValue(flag, fallback) {
   const arg = process.argv.find(a => a.startsWith(`--${flag}=`));
   return arg ? arg.slice(flag.length + 3) : fallback;
@@ -446,14 +455,24 @@ async function processDealer(page, row) {
 
   console.log(`Loaded ${rows.length} dealers.  DRY_RUN=${DRY_RUN}  HEADLESS=${HEADLESS}\n`);
 
-  const browser = await chromium.launch({ headless: HEADLESS });
-  const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  });
+  async function launchBrowserContext() {
+    const b = await chromium.launch({ headless: HEADLESS });
+    const c = await b.newContext({
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    });
+    return { browser: b, context: c };
+  }
+
+  let { browser, context } = await launchBrowserContext();
+  // Bounds memory growth from 147 sequential different sites' cookies/cache
+  // by periodically starting fresh, rather than waiting to see if a long run
+  // ever actually exhausts memory under Render free tier's limit.
+  const RECYCLE_EVERY = 20;
 
   const results = [];
 
   for (let i = 0; i < rows.length; i++) {
+    if (shuttingDown) { console.log('\n[stopped]'); break; }
     const row = rows[i];
 
     if (alreadySubmitted.has(row['Dealership Name'])) {
@@ -462,12 +481,38 @@ async function processDealer(page, row) {
       continue;
     }
 
+    if (i > 0 && i % RECYCLE_EVERY === 0 && browser.isConnected()) {
+      console.log('[recycling browser to bound memory growth]');
+      await context.close().catch(() => {});
+      await browser.close().catch(() => {});
+      ({ browser, context } = await launchBrowserContext());
+    }
+
     process.stdout.write(`[${i + 1}/${rows.length}] ${row['Dealership Name']} (${row['City']}) ... `);
 
-    // Fresh page per dealer — prevents redirects from one site bleeding into the next
-    const page = await context.newPage();
+    // Fresh page per dealer — prevents redirects from one site bleeding into the next.
+    // A newPage() failure here is only ever a genuine unexpected browser crash
+    // (not a stop request — shuttingDown is checked above, before this point,
+    // so a real Stop click never reaches this catch block), so relaunching and
+    // retrying is always the right call.
+    let page;
+    try {
+      page = await context.newPage();
+    } catch (err) {
+      console.log(`\n[browser died — relaunching] ${err.message}`);
+      ({ browser, context } = await launchBrowserContext());
+      try {
+        page = await context.newPage();
+      } catch (err2) {
+        const result = { name: row['Dealership Name'], city: row['City'], url: row['Contact Page URL'], status: 'ERROR', notes: `Browser relaunch failed: ${err2.message}`.slice(0, 150) };
+        results.push(result);
+        console.log(result.status + `  — ${result.notes}`);
+        fs.writeFileSync(CSV_OUT, stringify(results, { header: true, columns: ['name', 'city', 'url', 'status', 'notes'] }));
+        continue;
+      }
+    }
     const result = await processDealer(page, row);
-    await page.close();
+    await page.close().catch(() => {});
 
     results.push(result);
     console.log(result.status + (result.notes ? `  — ${result.notes}` : ''));
@@ -482,7 +527,7 @@ async function processDealer(page, row) {
     }
   }
 
-  await browser.close();
+  await browser.close().catch(() => {});
 
   const counts = results.reduce((acc, r) => ({ ...acc, [r.status]: (acc[r.status] || 0) + 1 }), {});
   console.log('\n── Summary ──────────────────────────────────');
