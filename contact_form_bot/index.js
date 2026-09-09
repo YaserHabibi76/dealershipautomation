@@ -150,11 +150,15 @@ async function detectCaptcha(page) {
   }
 }
 
+// Every other network call in this file has a bounded timeout; this one
+// didn't, so a hung or slow CapSolver response could stall a dealer (and the
+// whole run behind it) indefinitely instead of failing into CAPTCHA_ERROR.
 async function capsolverRequest(endpoint, body) {
   const res = await fetch(`https://api.capsolver.com/${endpoint}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ clientKey: CAPSOLVER_API_KEY, ...body }),
+    signal: AbortSignal.timeout(20000),
   });
   return res.json();
 }
